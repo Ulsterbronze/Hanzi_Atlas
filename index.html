@@ -818,7 +818,6 @@ function renderFlashcard(){
     return;
   }
   const c = fcDeck[fcIndex];
-  bumpSessionCount(c);
   document.getElementById('cardProgress').textContent = `${fcIndex+1} / ${fcDeck.length}`;
   document.getElementById('fcType').textContent = typeLabel(c.type);
   document.getElementById('fcType').className = 'type-tag type-'+c.type;
@@ -936,11 +935,13 @@ document.getElementById('nextBtn').addEventListener('click', ()=>{
   if(fcDeck.length===0) return;
   fcIndex = (fcIndex+1)%fcDeck.length;
   renderFlashcard();
+  bumpSessionCount(fcDeck[fcIndex]);
 });
 document.getElementById('prevBtn').addEventListener('click', ()=>{
   if(fcDeck.length===0) return;
   fcIndex = (fcIndex-1+fcDeck.length)%fcDeck.length;
   renderFlashcard();
+  bumpSessionCount(fcDeck[fcIndex]);
 });
 let fcShuffleMode = 'weighted';
 document.getElementById('shuffleBtn').addEventListener('click', ()=>{
@@ -950,6 +951,7 @@ document.getElementById('shuffleBtn').addEventListener('click', ()=>{
     : fcDeck[Math.floor(Math.random()*fcDeck.length)];
   fcIndex = fcDeck.indexOf(picked);
   renderFlashcard();
+  bumpSessionCount(fcDeck[fcIndex]);
 });
 document.getElementById('sessionResetBtn').addEventListener('click', ()=>{
   sessionSeenHanzi.clear();
