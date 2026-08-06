@@ -257,6 +257,15 @@
   .big-glyph{font-family:'Noto Serif SC',serif;font-size:5.6rem;line-height:1;color:var(--ink);margin-bottom:6px;}
   .front .hint{font-size:.72rem;color:var(--ink-faint);margin-top:14px;font-family:'IBM Plex Mono',monospace;}
 
+  .view-count-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    margin-top:10px;padding:6px 16px;border-radius:999px;
+    border:2px solid var(--seal);background:var(--seal-tint);color:var(--seal-dark);
+    font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:600;
+  }
+  .view-count-badge .eye{font-size:.9rem;}
+  .view-count-badge.zero{border-color:var(--line-strong);background:var(--paper-alt);color:var(--ink-faint);}
+
   .speak-btn{
     width:40px;height:40px;border-radius:50%;border:1px solid var(--line-strong);
     background:var(--paper);color:var(--ink-soft);font-size:1.05rem;
@@ -384,12 +393,21 @@
   }
   .browse-tile{
     background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 6px;
-    text-align:center;transition:all .12s;
+    text-align:center;transition:all .12s;position:relative;
   }
   .browse-tile:hover{border-color:var(--seal);transform:translateY(-2px);}
   .browse-tile .g{font-family:'Noto Serif SC',serif;font-size:1.5rem;}
   .browse-tile .p{font-family:'IBM Plex Mono',monospace;font-size:.62rem;color:var(--ink-faint);margin-top:3px;}
   .browse-count{font-size:.76rem;color:var(--ink-faint);margin-bottom:14px;font-family:'IBM Plex Mono',monospace;}
+
+  .browse-tile.viewed{border:2px solid var(--seal);background:var(--seal-tint);}
+  .browse-tile .view-badge{
+    position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 4px;
+    border-radius:999px;background:var(--seal);color:var(--paper);
+    font-family:'IBM Plex Mono',monospace;font-size:.6rem;font-weight:600;
+    display:flex;align-items:center;justify-content:center;line-height:1;
+    box-shadow:0 1px 3px rgba(33,31,28,0.35);
+  }
 
   /* modal */
   .modal-backdrop{
@@ -561,6 +579,7 @@
         <span class="rank-tag" id="mRank"></span>
         <div class="big-glyph cjk" id="mGlyphFront"></div>
         <button class="speak-btn" id="mSpeakBtn" aria-label="Play pronunciation" title="Play pronunciation">🔊</button>
+        <div class="view-count-badge" id="mViewBadge"><span class="eye">👁</span><span id="mViewText"></span></div>
         <div class="components-row" id="mComponents"></div>
         <div class="hint">tap to flip</div>
       </div>
@@ -703,7 +722,7 @@ function renderProgressPanel(){
 }
 document.getElementById('progressClearBtn').addEventListener('click', ()=>{
   if(!confirm('Clear all-time progress and history? This cannot be undone.')) return;
-  stats = { allTimeHanzi: new Set(), allTimeWords: new Set(), daily: {} };
+  stats = { allTimeHanzi: new Set(), allTimeWords: new Set(), daily: {}, viewCounts: {} };
   saveStats();
   renderProgressPanel();
 });
@@ -749,7 +768,7 @@ document.querySelectorAll('[data-goto]').forEach(b=>{
 });
 
 /* ================= FLASHCARDS ================= */
-let fcFilterType = 'all';
+let fcFilterTypes = new Set(['hanzi','word','radical','component']);
 let fcSearch = '';
 let fcFreqLo = 0, fcFreqHi = 1000;
 let fcWordFreqLo = 0, fcWordFreqHi = 2000;
@@ -758,7 +777,7 @@ let fcIndex = 0;
 
 function computeFcDeck(){
   fcDeck = CARDS.filter(c=>{
-    if(fcFilterType!=='all' && c.type!==fcFilterType) return false;
+    if(!fcFilterTypes.has(c.type)) return false;
     if(c.type==='hanzi'){
       const lo = fcFreqLo===0 ? 1 : fcFreqLo;
       if(c.rank<lo || c.rank>fcFreqHi) return false;
@@ -836,10 +855,11 @@ function loadStats(){
     return {
       allTimeHanzi: new Set(parsed.allTimeHanzi || []),
       allTimeWords: new Set(parsed.allTimeWords || []),
-      daily: parsed.daily || {}
+      daily: parsed.daily || {},
+      viewCounts: parsed.viewCounts || {}
     };
   } catch(e) {
-    return { allTimeHanzi: new Set(), allTimeWords: new Set(), daily: {} };
+    return { allTimeHanzi: new Set(), allTimeWords: new Set(), daily: {}, viewCounts: {} };
   }
 }
 function saveStats(){
@@ -853,7 +873,8 @@ function saveStats(){
     localStorage.setItem(STATS_KEY, JSON.stringify({
       allTimeHanzi: [...stats.allTimeHanzi],
       allTimeWords: [...stats.allTimeWords],
-      daily
+      daily,
+      viewCounts: stats.viewCounts
     }));
   } catch(e) { /* storage unavailable or full: fail silently, in-memory state still works this session */ }
 }
@@ -863,11 +884,22 @@ function getTodayEntry(){
   if(!stats.daily[k]) stats.daily[k] = { hanzi: [], words: [] };
   return stats.daily[k];
 }
+function cardViewCount(cardId){
+  return stats.viewCounts[cardId] || 0;
+}
+function recordDailyAllTime(card){
+  if(card.type==='hanzi' || card.type==='word'){
+    const today = getTodayEntry();
+    const todayArr = card.type==='hanzi' ? today.hanzi : today.words;
+    if(!todayArr.includes(card.id)) todayArr.push(card.id);
+    const allTimeSet = card.type==='hanzi' ? stats.allTimeHanzi : stats.allTimeWords;
+    allTimeSet.add(card.id);
+  }
+}
 
 let sessionSeenHanzi = new Set();
 let sessionSeenWords = new Set();
 function bumpSessionCount(card){
-  let changed = false;
   if(card.type==='hanzi' && !sessionSeenHanzi.has(card.id)){
     sessionSeenHanzi.add(card.id);
     document.getElementById('sessionHanziCount').textContent = sessionSeenHanzi.size;
@@ -875,14 +907,16 @@ function bumpSessionCount(card){
     sessionSeenWords.add(card.id);
     document.getElementById('sessionWordCount').textContent = sessionSeenWords.size;
   }
-  if(card.type==='hanzi' || card.type==='word'){
-    const today = getTodayEntry();
-    const todayArr = card.type==='hanzi' ? today.hanzi : today.words;
-    if(!todayArr.includes(card.id)){ todayArr.push(card.id); changed = true; }
-    const allTimeSet = card.type==='hanzi' ? stats.allTimeHanzi : stats.allTimeWords;
-    if(!allTimeSet.has(card.id)){ allTimeSet.add(card.id); changed = true; }
-  }
-  if(changed){ saveStats(); renderProgressPanel(); }
+  recordDailyAllTime(card);
+  stats.viewCounts[card.id] = (stats.viewCounts[card.id] || 0) + 1;
+  saveStats();
+  renderProgressPanel();
+}
+function recordBrowseView(card){
+  recordDailyAllTime(card);
+  stats.viewCounts[card.id] = (stats.viewCounts[card.id] || 0) + 1;
+  saveStats();
+  renderProgressPanel();
 }
 document.getElementById('nextBtn').addEventListener('click', ()=>{
   if(fcDeck.length===0) return;
@@ -917,11 +951,29 @@ document.getElementById('shuffleModeSwitch').addEventListener('click', function(
     ? 'Weighted <b>(frequency-biased)</b>'
     : 'True random <b>(uniform)</b>';
 });
-document.querySelectorAll('#view-cards .chip[data-type]').forEach(chip=>{
-  chip.addEventListener('click',()=>{
-    document.querySelectorAll('#view-cards .chip[data-type]').forEach(c=>c.classList.remove('active'));
-    chip.classList.add('active');
-    fcFilterType = chip.dataset.type;
+const ALL_TYPES = ['hanzi','word','radical','component'];
+function syncTypeChips(){
+  const allChip = document.querySelector('#view-cards .chip[data-type="all"]');
+  allChip.classList.toggle('active', ALL_TYPES.every(t=>fcFilterTypes.has(t)));
+  ALL_TYPES.forEach(t=>{
+    document.querySelector(`#view-cards .chip[data-type="${t}"]`).classList.toggle('active', fcFilterTypes.has(t));
+  });
+}
+document.querySelector('#view-cards .chip[data-type="all"]').addEventListener('click', ()=>{
+  fcFilterTypes = new Set(ALL_TYPES);
+  syncTypeChips();
+  fcIndex = 0;
+  renderFlashcard();
+});
+ALL_TYPES.forEach(t=>{
+  document.querySelector(`#view-cards .chip[data-type="${t}"]`).addEventListener('click', ()=>{
+    if(fcFilterTypes.has(t)){
+      if(fcFilterTypes.size===1) return;
+      fcFilterTypes.delete(t);
+    } else {
+      fcFilterTypes.add(t);
+    }
+    syncTypeChips();
     fcIndex = 0;
     renderFlashcard();
   });
@@ -934,7 +986,7 @@ document.getElementById('cardSearch').addEventListener('input', (e)=>{
 function setupDualSlider(minEl, maxEl, fillEl, labelEl, onChange){
   const step = parseInt(minEl.step, 10);
   const boundsMax = parseInt(minEl.max, 10);
-  function render(){
+  function updateVisual(){
     const lo = parseInt(minEl.value, 10);
     const hi = parseInt(maxEl.value, 10);
     const loPct = (lo/boundsMax)*100;
@@ -942,21 +994,23 @@ function setupDualSlider(minEl, maxEl, fillEl, labelEl, onChange){
     fillEl.style.left = loPct + '%';
     fillEl.style.width = (hiPct-loPct) + '%';
     labelEl.textContent = `${lo===0?1:lo}\u2013${hi}`;
-    onChange(lo, hi);
+    return {lo, hi};
   }
   minEl.addEventListener('input', ()=>{
     if(parseInt(minEl.value,10) > parseInt(maxEl.value,10) - step){
       minEl.value = Math.max(0, parseInt(maxEl.value,10) - step);
     }
-    render();
+    const {lo, hi} = updateVisual();
+    onChange(lo, hi);
   });
   maxEl.addEventListener('input', ()=>{
     if(parseInt(maxEl.value,10) < parseInt(minEl.value,10) + step){
       maxEl.value = Math.min(boundsMax, parseInt(minEl.value,10) + step);
     }
-    render();
+    const {lo, hi} = updateVisual();
+    onChange(lo, hi);
   });
-  render();
+  updateVisual(); // sync label/fill bar only on initial setup - do NOT trigger onChange's render
 }
 setupDualSlider(
   document.getElementById('fcFreqMin'), document.getElementById('fcFreqMax'),
@@ -994,11 +1048,15 @@ function renderBrowse(){
   });
   document.getElementById('browseCount').textContent = `${list.length} cards`;
   const grid = document.getElementById('browseGrid');
-  grid.innerHTML = list.map(c=>`
-    <div class="browse-tile" data-id="${c.id}">
+  grid.innerHTML = list.map(c=>{
+    const n = cardViewCount(c.id);
+    return `
+    <div class="browse-tile${n>0?' viewed':''}" data-id="${c.id}">
+      ${n>0 ? `<span class="view-badge">${n>99?'99+':n}</span>` : ''}
       <div class="g cjk">${c.char}</div>
       <div class="p">${c.pinyin}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   grid.querySelectorAll('.browse-tile').forEach(tile=>{
     tile.addEventListener('click', ()=>openModal(tile.dataset.id));
   });
@@ -1021,12 +1079,16 @@ function openModal(id){
   const c = CARDS.find(x=>x.id===id);
   if(!c) return;
   currentModalCard = c;
+  recordBrowseView(c);
   document.getElementById('mType').textContent = typeLabel(c.type);
   document.getElementById('mType').className = 'type-tag type-'+c.type;
   document.getElementById('mRank').textContent = (c.type==='hanzi'||c.type==='word') ? '#'+c.rank : '';
   document.getElementById('mGlyphFront').textContent = c.char;
   document.getElementById('mGlyphFront').style.fontSize = glyphFontSize(c.char);
   document.getElementById('mGlyphBack').textContent = c.char;
+  const vCount = cardViewCount(c.id);
+  document.getElementById('mViewText').textContent = vCount===1 ? 'viewed 1×' : `viewed ${vCount}×`;
+  document.getElementById('mViewBadge').classList.toggle('zero', vCount===0);
   if(c.type==='hanzi'){
     document.getElementById('mComponents').innerHTML = componentsHtml(c.components);
   } else if(c.type==='word'){
@@ -1060,11 +1122,13 @@ document.getElementById('mSpeakBtn').addEventListener('click', function(e){
 });
 document.getElementById('modalBackdrop').addEventListener('click', function(){
   this.classList.remove('active');
+  if(document.getElementById('view-browse').classList.contains('active')) renderBrowse();
 });
 
 /* ---------------- init ---------------- */
 renderHeaderStats();
 renderProgressPanel();
+syncTypeChips();
 renderPoolChart();
 renderFlashcard();
 
