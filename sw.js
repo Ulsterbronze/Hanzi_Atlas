@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'hanzi-atlas-v4';
+const CACHE_VERSION = 'hanzi-atlas-v5';
 const APP_SHELL = [
   './index.html',
   './manifest.json',
@@ -11,7 +11,15 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => cache.addAll(APP_SHELL))
   );
-  self.skipWaiting();
+  // NOTE: no self.skipWaiting() here on purpose. A newly installed worker now waits
+  // until the page explicitly asks it to take over (via the "Update now" banner),
+  // so updates don't silently swap files out from under an open session.
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', (event) => {
