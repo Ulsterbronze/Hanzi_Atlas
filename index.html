@@ -409,6 +409,20 @@
     box-shadow:0 1px 3px rgba(33,31,28,0.35);
   }
 
+  .update-banner{
+    display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;
+    background:var(--seal);color:var(--paper);padding:14px 20px;
+    align-items:center;justify-content:space-between;gap:12px;
+    font-family:'IBM Plex Mono',monospace;font-size:.8rem;
+    box-shadow:0 -2px 10px rgba(33,31,28,0.3);
+  }
+  .update-banner.show{display:flex;}
+  .update-banner button{
+    background:var(--paper);color:var(--seal-dark);border:none;border-radius:999px;
+    padding:8px 18px;font-family:inherit;font-size:.78rem;font-weight:600;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;flex-shrink:0;
+  }
+
   /* modal */
   .modal-backdrop{
     display:none;position:fixed;inset:0;background:rgba(33,31,28,0.55);z-index:50;
@@ -1134,9 +1148,47 @@ renderFlashcard();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('./sw.js').catch(()=>{ /* offline-first: fine if this fails on a plain file:// open */ });
+    navigator.serviceWorker.register('./sw.js').then((reg)=>{
+      // force an immediate check against the network instead of waiting for the browser's own schedule
+      reg.update().catch(()=>{});
+
+      // if a new worker is already waiting (e.g. found on a previous load), offer it now
+      if(reg.waiting){
+        showUpdateBanner(reg.waiting);
+      }
+      reg.addEventListener('updatefound', ()=>{
+        const newWorker = reg.installing;
+        if(!newWorker) return;
+        newWorker.addEventListener('statechange', ()=>{
+          // 'installed' + an existing controller means this is a genuine update, not the first install
+          if(newWorker.state==='installed' && navigator.serviceWorker.controller){
+            showUpdateBanner(newWorker);
+          }
+        });
+      });
+    }).catch(()=>{ /* offline-first: fine if this fails on a plain file:// open */ });
+
+    // if the controlling worker changes (after we tell it to skip waiting), reload once to pick up new files
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      if(refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
   });
 }
+function showUpdateBanner(worker){
+  const banner = document.getElementById('updateBanner');
+  banner.classList.add('show');
+  document.getElementById('updateBtn').addEventListener('click', ()=>{
+    worker.postMessage({type:'SKIP_WAITING'});
+    banner.classList.remove('show');
+  }, {once:true});
+}
 </script>
+<div class="update-banner" id="updateBanner">
+  <span>A new version is ready.</span>
+  <button id="updateBtn">Update now</button>
+</div>
 </body>
 </html>
