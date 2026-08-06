@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'hanzi-atlas-v1';
+const CACHE_VERSION = 'hanzi-atlas-v4';
 const APP_SHELL = [
   './index.html',
   './manifest.json',
