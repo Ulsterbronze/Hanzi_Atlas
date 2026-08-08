@@ -1,10 +1,10 @@
 # 汉字 Atlas — Frequency Flashcards
 
-A single-file, offline-first Chinese vocabulary app: 1,000 hanzi and 2,000 words, ranked by real corpus frequency, each broken down into its component pieces to help build mnemonics. Installable as a standalone app (PWA) — no framework, no build step, no backend.
+A single-file, offline-first Chinese vocabulary app: 1,500 hanzi and 3,000 words, ranked by real corpus frequency, each broken down into its component pieces to help build mnemonics. Installable as a standalone app (PWA) — no framework, no build step, no backend.
 
 ## Features
 
-- **1,000 hanzi + 2,000 words**, ranked by real frequency data (see *Data sources* below)
+- **1,500 hanzi + 3,000 words**, ranked by real frequency data (see *Data sources* below)
 - **Component breakdowns** on every card — see the building blocks before you flip to pinyin/meaning
 - **100 radicals + 86 phonetic components** as their own reference cards
 - **Weighted or true-random shuffle**, toggleable — weighted mode biases toward higher-frequency cards using real corpus-derived weights (hanzi) or a modeled Zipf curve (words)
@@ -12,6 +12,7 @@ A single-file, offline-first Chinese vocabulary app: 1,000 hanzi and 2,000 words
 - **Multi-select type filters** — combine Hanzi + Words (or any mix) in one shuffle pool
 - **Text-to-speech** pronunciation on every card (Web Speech API)
 - **Browse view** with search, and per-card view counts shown right on the card
+- **View-count color tiers in Browse** — a card's border/badge color shifts through 7 stages as its view count climbs (red → yellow → green → blue → bronze → silver → gold), with thresholds loosely informed by vocabulary-acquisition research rather than picked arbitrarily: 1–2 / 3–5 / 6–7 / 8–13 / 14–20 / 21–35 / 36+. (This tracks raw view count, not spaced-repetition intervals, so treat it as a familiarity milestone rather than a precise mastery measure.)
 - **Progress tracking**, stored locally on your device:
   - All-time unique hanzi/word coverage
   - Daily history (last 14 days shown, up to 365 kept)
@@ -20,9 +21,9 @@ A single-file, offline-first Chinese vocabulary app: 1,000 hanzi and 2,000 words
 
 ## Data sources
 
-- **Hanzi frequency, rank, pinyin, stroke count, radical, HSK level:** [Jun Da's Modern Chinese Character Frequency List](http://lingua.mtsu.edu/chinese-computing/statistics/) (ranks 1–500 from the original curated set; 501–1000 added later from the same source) and hanziDB
+- **Hanzi frequency, rank, pinyin, stroke count, radical, HSK level:** [Jun Da's Modern Chinese Character Frequency List](http://lingua.mtsu.edu/chinese-computing/statistics/) (ranks 1–500 from the original curated set; 501–1000 and 1001–1500 added later from the same source) and hanziDB
 - **Hanzi component decomposition:** [Make Me a Hanzi](https://github.com/skishore/makemeahanzi), cross-checked against real stroke counts — a component set is only shown if its strokes actually sum to the character's true stroke count
-- **Word frequency (ranks 1001–2000):** [jieba](https://github.com/fxsjy/jieba)'s corpus-derived frequency dictionary
+- **Word frequency (ranks 1001–3000):** [jieba](https://github.com/fxsjy/jieba)'s corpus-derived frequency dictionary
 - **Word/component definitions:** [CC-CEDICT](https://cc-cedict.org/)
 - **Kangxi radicals:** the standard 214-radical table, with traditional radical meanings (not modern standalone character meanings — e.g. 厂 is glossed "cliff," not "factory")
 
